@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITM Diagnostic Panorama</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f0e8;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(26, 95, 95, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        .logo-container {
+            margin-bottom: 15px;
+        }
+        .logo-container img {
+            max-width: 200px;
+            height: auto;
+        }
+        .header h1 {
+            font-size: 22px;
+            margin-bottom: 5px;
+            color: #1a5f5f;
+            font-weight: 600;
+        }
+        .header p {
+            font-size: 13px;
+            color: #5a5a5a;
+        }
+        .progress-bar {
+            width: 90%;
+            max-width: 380px;
+            height: 6px;
+            background: rgba(26, 95, 95, 0.15);
+            border-radius: 3px;
+            margin: 15px auto;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1a5f5f 0%, #2a8f8f 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .card-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            height: 550px;
+            margin: 10px auto;
+        }
+        .card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(26, 95, 95, 0.15);
+            cursor: grab;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 2px solid #e8e3d8;
+        }
+        .card.not-draggable {
+            cursor: default;
+            pointer-events: none;
+        }
+        .card.dragging {
+            transition: none;
+            cursor: grabbing;
+        }
+        .card.swiped-left {
+            transform: translateX(-150%) rotate(-30deg) !important;
+            opacity: 0 !important;
+        }
+        .card.swiped-right {
+            transform: translateX(150%) rotate(30deg) !important;
+            opacity: 0 !important;
+        }
+        .disease-header {
+            border-bottom: 3px solid #1a5f5f;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+        }
+        .disease-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a5f5f;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        .disease-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .disease-category {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #1a5f5f;
+            color: white;
+            border-radius: 12px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+        .likelihood-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .very-likely {
+            background: #ffe4e4;
+            color: #c00;
+        }
+        .possible {
+            background: #fff8e1;
+            color: #856404;
+        }
+        .rare {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .content-box {
+            background: #faf8f5;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            color: #4a5568;
+            line-height: 1.5;
+            border-left: 3px solid #1a5f5f;
+        }
+        .test-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 5px;
+        }
+        .test-section::-webkit-scrollbar {
+            width: 4px;
+        }
+        .test-section::-webkit-scrollbar-track {
+            background: #f5f0e8;
+            border-radius: 10px;
+        }
+        .test-section::-webkit-scrollbar-thumb {
+            background: #1a5f5f;
+            border-radius: 10px;
+        }
+        .test-box {
+            padding: 12px;
+            border-radius: 8px;
+            position: relative;
+            min-height: 60px;
+        }
+        .test-box.confirmer {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-left: 4px solid #2e7d32;
+        }
+        .test-box.excluder {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            border-left: 4px solid #c62828;
+        }
+        .box-type {
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            opacity: 0.8;
+        }
+        .box-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #1a202c;
+            line-height: 1.4;
+        }
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-top: 20px;
+        }
+        .action-btn {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 12px rgba(26, 95, 95, 0.25);
+        }
+        .action-btn:hover {
+            transform: scale(1.1);
+        }
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+        .reject-btn {
+            background: linear-gradient(135deg, #ef5350 0%, #c62828 100%);
+            color: white;
+        }
+        .accept-btn {
+            background: linear-gradient(135deg, #1a5f5f 0%, #2a8f8f 100%);
+            color: white;
+        }
+        .swipe-indicator {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 38px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 3px solid;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .swipe-indicator.left {
+            left: 15px;
+            color: #c62828;
+            border-color: #c62828;
+            background: rgba(255,255,255,0.95);
+        }
+        .swipe-indicator.right {
+            right: 15px;
+            color: #1a5f5f;
+            border-color: #1a5f5f;
+            background: rgba(255,255,255,0.95);
+        }
+        .summary {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(26, 95, 95, 0.1);
+        }
+        .summary-item {
+            text-align: center;
+        }
+        .summary-count {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1a5f5f;
+        }
+        .summary-label {
+            font-size: 11px;
+            color: #5a5a5a;
+            margin-top: 2px;
+        }
+        .reset-btn {
+            margin-top: 15px;
+            padding: 10px 24px;
+            background: #1a5f5f;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+        .reset-btn:hover {
+            transform: scale(1.05);
+            background: #2a8f8f;
+        }
+        .completion-message {
+            display: none;
+            text-align: center;
+            padding: 35px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(26, 95, 95, 0.15);
+            max-width: 400px;
+            width: 90%;
+            border: 2px solid #e8e3d8;
+        }
+        .completion-message h2 {
+            color: #1a5f5f;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        @media (max-width: 480px) {
+            .card-container {
+                height: 520px;
+            }
+            .disease-name {
+                font-size: 18px;
+            }
+            .header h1 {
+                font-size: 20px;
+            }
+            .logo-container img {
+                max-width: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-container">
+   <img src="logo-itm.jpg" alt="Logo" class="site-logo">
+</div>
+        <h1>Undifferentiated Fever in DRC</h1>
+        <p>Swipe to evaluate differential diagnoses</p>
+    </div>
+    
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressBar"></div>
+    </div>
+    
+    <div class="card-container" id="cardContainer"></div>
+    
+    <div class="completion-message" id="completionMessage">
+        <h2>✓ Evaluation Complete!</h2>
+        <div class="summary">
+            <div class="summary-item">
+                <div class="summary-count" id="finalAccepted">0</div>
+                <div class="summary-label">Considered</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-count" id="finalRejected">0</div>
+                <div class="summary-label">Excluded</div>
+            </div>
+        </div>
+        <button class="reset-btn" onclick="resetCards()">Start Over</button>
+    </div>
+    
+    <div class="action-buttons" id="actionButtons">
+        <button class="action-btn reject-btn" onclick="swipeCard('left')">✗</button>
+        <button class="action-btn accept-btn" onclick="swipeCard('right')">✓</button>
+    </div>
+    
+    <div class="summary" id="summary">
+        <div class="summary-item">
+            <div class="summary-count" id="acceptedCount">0</div>
+            <div class="summary-label">Considered</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-count" id="rejectedCount">0</div>
+            <div class="summary-label">Excluded</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-count" id="remainingCount">0</div>
+            <div class="summary-label">Remaining</div>
+        </div>
+    </div>
+
+    <script>
+        const diseases = [
+            {
+                name: "Malaria",
+                category: "Parasitic",
+                likelihood: "very-likely",
+                description: "Most common cause of fever in DRC, transmitted by Anopheles mosquitoes",
+                tests: [
+                    {type: "confirmer", title: "Malaria RDT Positive"},
+                    {type: "confirmer", title: "High Fever >39°C"},
+                    {type: "confirmer", title: "Blood Smear Positive"},
+                    {type: "excluder", title: "No Fever"}
+                ]
+            },
+            {
+                name: "Typhoid Fever",
+                category: "Bacterial",
+                likelihood: "very-likely",
+                description: "Systemic infection caused by Salmonella typhi, common in areas with poor sanitation",
+                tests: [
+                    {type: "confirmer", title: "Persistent Fever >7 days"},
+                    {type: "confirmer", title: "Rose Spots on Trunk"},
+                    {type: "confirmer", title: "Blood Culture Positive"},
+                    {type: "excluder", title: "Fever <3 days"}
+                ]
+            },
+            {
+                name: "Tuberculosis",
+                category: "Bacterial",
+                likelihood: "possible",
+                description: "Chronic infection that can present with prolonged fever and night sweats",
+                tests: [
+                    {type: "confirmer", title: "Chronic Cough >2 weeks"},
+                    {type: "confirmer", title: "Night Sweats"},
+                    {type: "confirmer", title: "Weight Loss"},
+                    {type: "excluder", title: "Acute Onset <1 week"}
+                ]
+            },
+            {
+                name: "HIV/AIDS with Opportunistic Infection",
+                category: "Viral",
+                likelihood: "very-likely",
+                description: "Immunodeficiency leading to various opportunistic infections causing fever",
+                tests: [
+                    {type: "confirmer", title: "HIV Test Positive"},
+                    {type: "confirmer", title: "CD4 Count <200"},
+                    {type: "confirmer", title: "Chronic Fever"},
+                    {type: "excluder", title: "HIV Test Negative"}
+                ]
+            },
+            {
+                name: "Bacterial Pneumonia",
+                category: "Bacterial",
+                likelihood: "very-likely",
+                description: "Acute respiratory infection with fever, common in tropical settings",
+                tests: [
+                    {type: "confirmer", title: "Cough with Sputum"},
+                    {type: "confirmer", title: "Chest Pain"},
+                    {type: "confirmer", title: "Abnormal Lung Sounds"},
+                    {type: "excluder", title: "Normal Respiratory Exam"}
+                ]
+            }
+        ];
+
+        let currentIndex = 0;
+        let acceptedCount = 0;
+        let rejectedCount = 0;
+        let isDragging = false;
+        let startX = 0;
+        let currentX = 0;
+        let cardElement = null;
+
+        function createCard(disease, index) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.zIndex = diseases.length - index;
+            
+            if (index > currentIndex) {
+                const stackPosition = index - currentIndex;
+                card.style.transform = `scale(${1 - stackPosition * 0.05}) translateY(${stackPosition * 5}px)`;
+                card.style.opacity = stackPosition > 2 ? '0' : '1';
+                card.classList.add('not-draggable');
+            }
+
+            let testsHTML = disease.tests.map(test => `
+                <div class="test-box ${test.type}">
+                    <div class="box-type">${test.type}</div>
+                    <div class="box-title">${test.title}</div>
+                </div>
+            `).join('');
+
+            card.innerHTML = `
+                <div class="swipe-indicator left">✗</div>
+                <div class="swipe-indicator right">✓</div>
+                <div class="disease-header">
+                    <div class="disease-name">${disease.name}</div>
+                    <div class="disease-info">
+                        <span class="disease-category">${disease.category}</span>
+                        <span class="likelihood-badge ${disease.likelihood}">${disease.likelihood.replace('-', ' ')}</span>
+                    </div>
+                </div>
+                <div class="content-box">${disease.description}</div>
+                <div class="test-section">
+                    ${testsHTML}
+                </div>
+            `;
+
+            if (index === currentIndex) {
+                card.addEventListener('touchstart', handleTouchStart, {passive: true});
+                card.addEventListener('touchmove', handleTouchMove, {passive: false});
+                card.addEventListener('touchend', handleTouchEnd);
+                card.addEventListener('mousedown', handleMouseDown);
+                card.addEventListener('mousemove', handleMouseMove);
+                card.addEventListener('mouseup', handleMouseEnd);
+                card.addEventListener('mouseleave', handleMouseEnd);
+            }
+
+            return card;
+        }
+
+        function handleStart(clientX) {
+            if (currentIndex >= diseases.length) return;
+            isDragging = true;
+            startX = clientX;
+            const allCards = document.querySelectorAll('.card:not(.not-draggable)');
+            cardElement = allCards[0];
+            if (cardElement) {
+                cardElement.classList.add('dragging');
+            }
+        }
+
+        function handleMove(clientX) {
+            if (!isDragging || !cardElement) return;
+            currentX = clientX;
+            const deltaX = currentX - startX;
+            const rotation = deltaX * 0.1;
+            cardElement.style.transform = `translateX(${deltaX}px) rotate(${rotation}deg)`;
+
+            const leftIndicator = cardElement.querySelector('.swipe-indicator.left');
+            const rightIndicator = cardElement.querySelector('.swipe-indicator.right');
+
+            if (deltaX < -50) {
+                leftIndicator.style.opacity = Math.min(1, Math.abs(deltaX) / 100);
+                rightIndicator.style.opacity = 0;
+            } else if (deltaX > 50) {
+                rightIndicator.style.opacity = Math.min(1, deltaX / 100);
+                leftIndicator.style.opacity = 0;
+            } else {
+                leftIndicator.style.opacity = 0;
+                rightIndicator.style.opacity = 0;
+            }
+        }
+
+        function handleEnd() {
+            if (!isDragging || !cardElement) return;
+            isDragging = false;
+            const deltaX = currentX - startX;
+            cardElement.classList.remove('dragging');
+
+            const indicators = cardElement.querySelectorAll('.swipe-indicator');
+            indicators.forEach(ind => ind.style.opacity = 0);
+
+            if (Math.abs(deltaX) > 100) {
+                if (deltaX > 0) {
+                    swipeCard('right');
+                } else {
+                    swipeCard('left');
+                }
+            } else {
+                cardElement.style.transform = 'translateX(0) rotate(0)';
+            }
+            cardElement = null;
+        }
+
+        function handleTouchStart(e) {
+            handleStart(e.touches[0].clientX);
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            handleMove(e.touches[0].clientX);
+        }
+
+        function handleTouchEnd(e) {
+            handleEnd();
+        }
+
+        function handleMouseDown(e) {
+            e.preventDefault();
+            handleStart(e.clientX);
+        }
+
+        function handleMouseMove(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            handleMove(e.clientX);
+        }
+
+        function handleMouseEnd(e) {
+            handleEnd();
+        }
+
+        function swipeCard(direction) {
+            if (currentIndex >= diseases.length) return;
+            const allCards = document.querySelectorAll('.card:not(.not-draggable)');
+            if (allCards.length === 0) return;
+
+            const topCard = allCards[0];
+            if (direction === 'left') {
+                topCard.classList.add('swiped-left');
+                rejectedCount++;
+            } else {
+                topCard.classList.add('swiped-right');
+                acceptedCount++;
+            }
+
+            currentIndex++;
+            updateUI();
+
+            setTimeout(() => {
+                topCard.remove();
+                recreateCardStack();
+                if (currentIndex >= diseases.length) {
+                    setTimeout(showCompletion, 500);
+                }
+            }, 300);
+        }
+
+        function recreateCardStack() {
+            const container = document.getElementById('cardContainer');
+            const existingCards = container.querySelectorAll('.card');
+            existingCards.forEach(card => card.remove());
+
+            for (let i = currentIndex; i < diseases.length && i < currentIndex + 3; i++) {
+                const card = createCard(diseases[i], i);
+                container.appendChild(card);
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('acceptedCount').textContent = acceptedCount;
+            document.getElementById('rejectedCount').textContent = rejectedCount;
+            document.getElementById('remainingCount').textContent = diseases.length - currentIndex;
+            const progress = (currentIndex / diseases.length) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        function showCompletion() {
+            document.getElementById('cardContainer').style.display = 'none';
+            document.getElementById('actionButtons').style.display = 'none';
+            document.getElementById('summary').style.display = 'none';
+            document.getElementById('completionMessage').style.display = 'block';
+            document.getElementById('finalAccepted').textContent = acceptedCount;
+            document.getElementById('finalRejected').textContent = rejectedCount;
+        }
+
+        function resetCards() {
+            currentIndex = 0;
+            acceptedCount = 0;
+            rejectedCount = 0;
+            document.getElementById('cardContainer').style.display = 'block';
+            document.getElementById('actionButtons').style.display = 'flex';
+            document.getElementById('summary').style.display = 'flex';
+            document.getElementById('completionMessage').style.display = 'none';
+            initializeCards();
+            updateUI();
+        }
+
+        function initializeCards() {
+            const container = document.getElementById('cardContainer');
+            container.innerHTML = '';
+            const cardsToCreate = Math.min(3, diseases.length);
+            for (let i = cardsToCreate - 1; i >= 0; i--) {
+                const card = createCard(diseases[i], i);
+                container.appendChild(card);
+            }
+        }
+
+        if (diseases.length > 0) {
+            initializeCards();
+            updateUI();
+        }
+    </script>
+</body>
+</html>
